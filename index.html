@@ -101,25 +101,45 @@
     filter: saturate(1.05) contrast(1.02);
   }
 
-  /* Layout */
+  /* ===============================
+     LAYOUT (GMod-safe flex layout)
+     =============================== */
+
   #wrap{
     position:fixed;
     inset:0;
-    display:grid;
-    grid-template-rows: 1fr auto;
     z-index:3;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    pointer-events:none; /* avoids odd mouse capture in the in-game browser */
     animation: fadeIn 600ms ease-out;
   }
 
-  /* Top HUD bar */
   #topbar{
-    align-self:start;
-    justify-self:stretch;
     display:flex;
     align-items:center;
     justify-content:space-between;
     padding:18px 22px;
     gap:14px;
+    pointer-events:none;
+  }
+
+  #center{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 0 22px;
+    pointer-events:none;
+  }
+
+  #bottombar{
+    padding: 18px 22px;
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    pointer-events:none;
   }
 
   .pill{
@@ -214,9 +234,9 @@
   }
 
   /* Center panel */
-  #center{
-    place-self:center;
+  #center .panel{
     width:min(740px, calc(100% - 44px));
+    pointer-events:none;
   }
 
   .panel{
@@ -400,17 +420,6 @@
     flex:0 0 auto;
   }
 
-  /* Bottom bar */
-  #bottombar{
-    align-self:end;
-    justify-self:stretch;
-    padding: 18px 22px;
-    display:flex;
-    justify-content:space-between;
-    gap:14px;
-    flex-wrap:wrap;
-  }
-
   .foot{
     display:flex;
     gap:10px;
@@ -513,7 +522,6 @@
         <span class="tiny">Pro tip:</span>
         <span class="kbd">Q</span><span class="tiny">Gesture Menu</span>
         <span class="kbd">C</span><span class="tiny">context menu</span>
-        <span class="kbd">Q</span><span class="tiny">spawn menu</span>
       </div>
 
       <div class="foot">
@@ -579,6 +587,19 @@
     }
   }
 
+  // NEW: Wait until viewport is "real" (GMod loading browser can start with tiny size)
+  function waitForViewportReady(cb){
+    let tries = 0;
+    (function check(){
+      const w = window.innerWidth || 0;
+      const h = window.innerHeight || 0;
+      if (w > 300 && h > 200) return cb();
+      tries++;
+      if (tries > 60) return cb(); // ~1s max
+      setTimeout(check, 16);
+    })();
+  }
+
   // --------- Set header text ----------
   const serverNameEl = document.getElementById("serverName");
   const serverTagEl  = document.getElementById("serverTag");
@@ -639,7 +660,6 @@
 
   function runPhases(){
     if (phaseIndex >= PHASES.length) {
-      // Keep it feeling alive near the end
       phaseEl.textContent = "Final checks…";
       setStatus("READY");
       return;
@@ -649,16 +669,15 @@
     phaseEl.textContent = p.t;
     setStatus(p.status);
 
-    // Advance progress smoothly for this phase
     const target = Math.min(99, progress + Math.round((p.w / totalWeight) * 100));
     const start = progress;
 
-    const duration = 1200 + Math.random() * 1400; // 1.2–2.6s
+    const duration = 1200 + Math.random() * 1400;
     const startTime = Date.now();
 
     function step(){
       const t = (Date.now() - startTime) / duration;
-      const eased = t < 1 ? (1 - Math.pow(1 - t, 3)) : 1; // easeOutCubic
+      const eased = t < 1 ? (1 - Math.pow(1 - t, 3)) : 1;
       const val = Math.round(start + (target - start) * eased);
 
       progress = val;
@@ -675,14 +694,11 @@
     requestAnimationFrame(step);
   }
 
-  // Start progress
-  percentEl.textContent = "0%";
-  barFill.style.width = "8%";
-  setTimeout(runPhases, 350);
-
-  // --------- Optional: bouncers (cleaner + lighter) ----------
-  if (ENABLE_BOUNCERS) {
+  // --------- Optional: bouncers as a function (so we can start after viewport is ready) ----------
+  function startBouncers(){
     const container = document.getElementById("bouncers");
+    if (!container) return;
+
     const SIZE = BOUNCER_SIZE;
     const COUNT = Math.min(BOUNCER_COUNT, BOUNCER_IMAGES.length);
     const SPEED_MIN = 0.85;
@@ -690,7 +706,6 @@
 
     function rand(min, max){ return Math.random() * (max - min) + min; }
 
-    // unique pick
     const unique = Array.from(new Set(BOUNCER_IMAGES));
     for (let i = unique.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -707,7 +722,7 @@
       img.height = SIZE;
       img.draggable = false;
 
-      // Safer URL resolve (works better inside GMod's loading browser too)
+      // Safer URL resolve (handles GMod query params cleanly)
       img.src = new URL(src, window.location.href).href;
 
       const w = window.innerWidth;
@@ -728,6 +743,16 @@
 
     for (const src of chosen) sprites.push(makeSprite(src));
 
+    function clampAll(){
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      for (const s of sprites){
+        s.x = Math.min(Math.max(0, s.x), Math.max(0, w - SIZE));
+        s.y = Math.min(Math.max(0, s.y), Math.max(0, h - SIZE));
+        s.el.style.transform = `translate3d(${s.x}px, ${s.y}px, 0)`;
+      }
+    }
+
     function tick(){
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -746,8 +771,24 @@
 
       requestAnimationFrame(tick);
     }
+
+    // NEW: keep bouncers inside bounds if GMod resizes the panel mid-load
+    window.addEventListener("resize", clampAll);
+
     requestAnimationFrame(tick);
   }
+
+  // Start after viewport is ready (THIS is the main GMod fix)
+  waitForViewportReady(() => {
+    // progress
+    percentEl.textContent = "0%";
+    barFill.style.width = "8%";
+    setTimeout(runPhases, 350);
+
+    // bouncers
+    if (ENABLE_BOUNCERS) startBouncers();
+  });
+
 })();
 </script>
 </body>
