@@ -7,11 +7,7 @@
 
 <style>
   :root{
-    /* FIX: GMod renders your dim/vignette way darker than Chrome.
-       Keep it brighter by default. */
-    --bg-dim: 0.92;
-
-    --panel: rgba(10, 12, 16, 0.55);
+    --panel: rgba(10, 12, 16, 0.60);
     --stroke: rgba(255,255,255,0.10);
     --stroke-2: rgba(255,255,255,0.14);
     --txt: rgba(255,255,255,0.92);
@@ -37,63 +33,51 @@
     font-family:var(--sans);
   }
 
-  /* Background (fallback stays pretty even if image fails) */
-  #bg{
+  /* REAL IMAGE BACKGROUND (GMod-safe) */
+  #bgimg{
     position:fixed;
     inset:0;
-    background-color:#0b0e14;
-
-    /* FIX: lighter gradient so the image doesn't look black in GMod */
-    background-image: radial-gradient(60% 70% at 50% 40%, rgba(0,0,0,0.00), rgba(0,0,0,0.35));
-    background-position:center;
-    background-repeat:no-repeat;
-    background-size:cover;
-
-    filter: brightness(var(--bg-dim));
-    transform: scale(1.02);
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    z-index:0;
+    display:block;
   }
 
+  /* overlay so text is readable */
+  #shade{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    background:
+      radial-gradient(70% 80% at 50% 40%, rgba(0,0,0,0.10), rgba(0,0,0,0.65));
+  }
+
+  /* optional light grain (kept low for GMod) */
   #grain{
     position:fixed;
     inset:-40px;
     pointer-events:none;
-
-    /* FIX: grain is heavy in GMod, lower opacity */
-    opacity:0.06;
-
+    z-index:2;
+    opacity:0.05;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
     animation: grain 7s steps(10) infinite;
     mix-blend-mode: overlay;
   }
   @keyframes grain{
     0% { transform: translate(0,0); }
-    10%{ transform: translate(-2%, -3%); }
-    20%{ transform: translate(-4%, 2%); }
-    30%{ transform: translate(3%, -1%); }
-    40%{ transform: translate(2%, 4%); }
-    50%{ transform: translate(-3%, 2%); }
-    60%{ transform: translate(4%, 0%); }
-    70%{ transform: translate(0%, -4%); }
-    80%{ transform: translate(-2%, 3%); }
-    90%{ transform: translate(3%, 2%); }
+    25%{ transform: translate(-2%, 2%); }
+    50%{ transform: translate(2%, -2%); }
+    75%{ transform: translate(-2%, -2%); }
     100%{ transform: translate(0,0); }
   }
 
-  #vignette{
-    position:fixed;
-    inset:0;
-    pointer-events:none;
-
-    /* FIX: MUCH lighter vignette for GMod */
-    background: radial-gradient(120% 90% at 50% 40%, rgba(0,0,0,0.00), rgba(0,0,0,0.35));
-  }
-
+  /* bouncers */
   #bouncers{
     position:fixed;
     inset:0;
     pointer-events:none;
-    z-index:2;
-    opacity:0.98;
+    z-index:3;
   }
   .bouncer{
     position:absolute;
@@ -105,38 +89,25 @@
     border:1px solid rgba(255,255,255,0.12);
     user-select:none;
     transform: translate3d(0,0,0);
-    filter: saturate(1.05) contrast(1.02);
   }
 
+  /* UI layout */
   #wrap{
     position:fixed;
     inset:0;
-    z-index:3;
+    z-index:4;
     display:flex;
     flex-direction:column;
     justify-content:space-between;
     pointer-events:none;
-    animation: fadeIn 600ms ease-out;
+    padding:18px 22px;
   }
+
   #topbar{
     display:flex;
     align-items:center;
     justify-content:space-between;
-    padding:18px 22px;
     gap:14px;
-  }
-  #center{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding: 0 22px;
-  }
-  #bottombar{
-    padding: 18px 22px;
-    display:flex;
-    justify-content:space-between;
-    gap:14px;
-    flex-wrap:wrap;
   }
 
   .pill{
@@ -151,14 +122,13 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
+
   .brand{ display:flex; align-items:center; gap:12px; min-width: 260px; }
   .logo{
     width:38px; height:38px;
     border-radius:12px;
     background: linear-gradient(135deg, rgba(170,140,255,0.95), rgba(120,255,190,0.85));
     box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-    position:relative;
-    overflow:hidden;
   }
   .brandText{ display:flex; flex-direction:column; line-height:1.1; }
   .serverName{ font-weight:800; letter-spacing:0.6px; font-size:16px; }
@@ -166,9 +136,7 @@
 
   .stats{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
   .stat{
-    display:flex;
-    align-items:center;
-    gap:8px;
+    display:flex; align-items:center; gap:8px;
     padding:10px 12px;
     border-radius:999px;
     background: rgba(10, 12, 16, 0.40);
@@ -178,14 +146,22 @@
   }
   .dot{
     width:8px; height:8px; border-radius:999px;
-    background: var(--good);
-    box-shadow: 0 0 12px rgba(120,255,190,0.6);
+    background: var(--warn);
+    box-shadow: 0 0 12px rgba(255,200,120,0.5);
   }
   .statLabel{ font-size:12px; color: var(--muted-2); font-family: var(--mono); }
   .statValue{ font-size:12px; font-family: var(--mono); color: var(--txt); }
 
-  #center .panel{ width:min(740px, calc(100% - 44px)); }
+  #center{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding: 0 22px;
+    flex:1;
+  }
+
   .panel{
+    width:min(740px, calc(100% - 44px));
     border-radius: var(--radius);
     background: linear-gradient(180deg, var(--panel), rgba(10,12,16,0.40));
     border:1px solid var(--stroke-2);
@@ -195,42 +171,26 @@
     -webkit-backdrop-filter: blur(10px);
   }
   .panelInner{ padding:26px 26px 20px 26px; }
-  .headline{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
-  .hTitle{ font-size:44px; font-weight:900; letter-spacing:1.2px; }
-  .subline{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; color: var(--muted); font-size:14px; }
-  .chip{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding:7px 10px;
-    border-radius:999px;
-    background: rgba(255,255,255,0.06);
-    border:1px solid rgba(255,255,255,0.10);
-    font-family: var(--mono);
-    font-size:12px;
-    color: rgba(255,255,255,0.75);
-  }
-  .chip b{ color: rgba(255,255,255,0.92); font-weight:700; }
 
-  .progressWrap{ margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+  .hTitle{ font-size:44px; font-weight:900; letter-spacing:1.2px; margin-bottom:10px; }
+
   .progressRow{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
-  #phase{ font-family: var(--mono); font-size:13px; color: rgba(255,255,255,0.78); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #phase{ font-family: var(--mono); font-size:13px; color: rgba(255,255,255,0.78); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #percent{ font-family: var(--mono); font-size:13px; color: rgba(255,255,255,0.78); min-width:64px; text-align:right; }
+
   .bar{
+    margin-top:10px;
     height:10px;
     border-radius:999px;
     background: rgba(255,255,255,0.10);
     border:1px solid rgba(255,255,255,0.08);
     overflow:hidden;
-    position:relative;
   }
   .bar > span{
-    display:block; height:100%; width: 15%;
+    display:block; height:100%; width:8%;
     border-radius:999px;
     background: linear-gradient(90deg, rgba(170,140,255,0.95), rgba(120,255,190,0.85));
-    box-shadow: 0 0 18px rgba(170,140,255,0.35);
     transition: width 300ms ease;
-    position:relative;
   }
 
   .grid2{ margin-top:18px; display:grid; grid-template-columns: 1.15fr 0.85fr; gap:14px; }
@@ -248,12 +208,13 @@
     text-transform: uppercase;
     margin-bottom:8px;
   }
+
   #tip{ font-size:14px; color: rgba(255,255,255,0.86); line-height:1.35; }
 
   .rules{ display:flex; flex-direction:column; gap:8px; }
-  .rule{ display:flex; gap:10px; align-items:flex-start; font-size:13px; color: rgba(255,255,255,0.82); line-height:1.25; }
+  .rule{ display:flex; gap:10px; align-items:flex-start; font-size:13px; color: rgba(255,255,255,0.82); }
   .badge{
-    margin-top:2px; width:18px; height:18px;
+    width:18px; height:18px;
     border-radius:6px;
     background: rgba(255,255,255,0.10);
     border:1px solid rgba(255,255,255,0.12);
@@ -262,6 +223,14 @@
     font-size:11px;
     color: rgba(255,255,255,0.78);
     flex:0 0 auto;
+    margin-top:2px;
+  }
+
+  #bottombar{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
   }
 
   .foot{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
@@ -276,7 +245,7 @@
     font-size:12px;
   }
 
-  /* Debug overlay (auto hides after success) */
+  /* small debug line */
   #dbg{
     position:fixed;
     left:14px;
@@ -299,17 +268,14 @@
     .grid2{ grid-template-columns: 1fr; }
     .brand{ min-width: unset; }
   }
-  @keyframes fadeIn{
-    from{ opacity:0; transform: translateY(10px); }
-    to{ opacity:1; transform: translateY(0); }
-  }
 </style>
 </head>
 
 <body>
-  <div id="bg"></div>
+  <!-- IMPORTANT: This is what makes it work in GMod -->
+  <img id="bgimg" alt="" />
+  <div id="shade"></div>
   <div id="grain"></div>
-  <div id="vignette"></div>
   <div id="bouncers"></div>
 
   <div id="wrap">
@@ -318,7 +284,7 @@
         <div class="logo" aria-hidden="true"></div>
         <div class="brandText">
           <div class="serverName" id="serverName">Steven's Universe</div>
-          <div class="serverTag" id="serverTag">gm: sandbox • mode: round script</div>
+          <div class="serverTag" id="serverTag">gm: Z-City • mode: round script</div>
         </div>
       </div>
 
@@ -332,21 +298,13 @@
     <div id="center">
       <div class="panel">
         <div class="panelInner">
-          <div class="headline">
-            <div class="hTitle">Loading in…</div>
-            <div class="subline">
-              <span class="chip"><b>Tip:</b> keep voice low, footsteps loud.</span>
-              <span class="chip"><b>Hint:</b> missing textures? wait for workshop to mount.</span>
-            </div>
-          </div>
+          <div class="hTitle">Loading in…</div>
 
-          <div class="progressWrap">
-            <div class="progressRow">
-              <div id="phase">Starting…</div>
-              <div id="percent">0%</div>
-            </div>
-            <div class="bar"><span id="barFill"></span></div>
+          <div class="progressRow">
+            <div id="phase">Starting…</div>
+            <div id="percent">0%</div>
           </div>
+          <div class="bar"><span id="barFill"></span></div>
 
           <div class="grid2">
             <div class="card">
@@ -361,6 +319,7 @@
               <div class="rule"><span class="badge">3</span><span>Make sure to RDM everyone.</span></div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -383,80 +342,58 @@
 
 <script>
 (function(){
-  // ======= SET THIS (your GitHub Pages folder) =======
-  const SITE_BASE = "https://leongarvey21.github.io/gmod-loadingscreen/"; // MUST end with /
-  // ===================================================
+  // MUST end with /
+  const SITE_BASE = "https://leongarvey21.github.io/gmod-loadingscreen/";
 
-  // If you already have bg.png working, keep it first.
-  const BG_FILES = [
-    "bg.png",
-    "bg.jpg",
-    "The_Rower_2013.JPG",
-    "The_Rower_2013.jpg",
-    "the_rower_2013.jpg",
-    "the_rower_2013.JPG"
-  ];
+  // IMPORTANT: rename your background to bg.jpg (lowercase) and put it beside index.html
+  const BG = "bg.jpg";
 
-  // Bouncers
+  const dbg = document.getElementById("dbg");
+  function setDbg(t){ if (dbg) dbg.textContent = t; }
+
+  // Load background via <img> (most compatible with GMod CEF)
+  const bgimg = document.getElementById("bgimg");
+  const bgUrl = SITE_BASE + BG + "?v=" + Date.now();
+
+  bgimg.onload = function(){
+    setDbg("dbg: bg loaded OK\n" + bgUrl + "\n(if still dark, it’s the overlay — tell me)");
+    setTimeout(() => { if (dbg) dbg.style.display = "none"; }, 5000);
+  };
+  bgimg.onerror = function(){
+    setDbg("dbg: bg FAILED\n" + bgUrl + "\nFix: rename to bg.jpg + baseline jpg (Paint save-as)");
+  };
+  bgimg.src = bgUrl;
+
+  // clock
+  const clockEl = document.getElementById("clockTxt");
+  function tickClock(){
+    const d = new Date();
+    clockEl.textContent = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+    setTimeout(tickClock, 10000);
+  }
+  tickClock();
+
+  // fake progress
+  const phaseEl = document.getElementById("phase");
+  const percentEl = document.getElementById("percent");
+  const barFill = document.getElementById("barFill");
+
+  const phases = ["Starting…","Mounting Workshop…","Loading scripts…","Spawning Ben…","Final checks…"];
+  let p = 0, idx = 0;
+  function step(){
+    p = Math.min(99, p + Math.floor(Math.random()*6) + 2);
+    percentEl.textContent = p + "%";
+    barFill.style.width = Math.max(8, p) + "%";
+    if (p > (idx+1)*18 && idx < phases.length-1){ idx++; phaseEl.textContent = phases[idx]; }
+    setTimeout(step, 350 + Math.random()*400);
+  }
+  step();
+
+  // bouncers
   const ENABLE_BOUNCERS = true;
   const BOUNCER_SIZE = 72;
-  const BOUNCER_COUNT = 9;
-  const BOUNCER_IMAGES = [
-    "ben.jpg",
-    "dextr.jpg",
-    "hd.jpg",
-    "flight2.jpg",
-    "semaschan.png",
-    "seamus.jpg",
-    "sh.png",
-    "joe.png",
-    "mrwest.jpg"
-  ];
+  const BOUNCER_IMAGES = ["ben.jpg","dextr.jpg","hd.jpg","flight2.jpg","semaschan.png","seamus.jpg","sh.png","joe.png","mrwest.jpg"];
 
-  // Debug
-  const dbg = document.getElementById("dbg");
-  function setDbg(t){ if(dbg) dbg.textContent = t; }
-  function hideDbgSoon(){
-    setTimeout(() => { if (dbg) dbg.style.display = "none"; }, 4500);
-  }
-
-  // Background apply (FIXED: lighter gradient so it doesn’t look black in GMod)
-  const bgEl = document.getElementById("bg");
-  function applyBackground(absUrl){
-    if (!bgEl) return;
-
-    // FIX: keep overlay light
-    bgEl.style.backgroundImage =
-      'radial-gradient(60% 70% at 50% 40%, rgba(0,0,0,0.00), rgba(0,0,0,0.35)), ' +
-      'url("' + absUrl + '")';
-    bgEl.style.backgroundPosition = "center";
-    bgEl.style.backgroundRepeat = "no-repeat";
-    bgEl.style.backgroundSize = "cover";
-  }
-
-  function tryBg(i){
-    if (i >= BG_FILES.length){
-      setDbg("dbg: background FAILED\n- check filename case\n- make sure it exists on GitHub Pages\n- open the image URL in a normal browser");
-      return;
-    }
-
-    const abs = SITE_BASE + BG_FILES[i] + "?v=" + Date.now();
-    setDbg("dbg: trying\n" + abs);
-
-    const img = new Image();
-    img.onload = function(){
-      applyBackground(abs);
-      setDbg("dbg: background OK\n" + abs);
-      hideDbgSoon();
-      startAfterViewportReady(); // start bouncers + other stuff after we know bg works
-    };
-    img.onerror = function(){
-      tryBg(i + 1);
-    };
-    img.src = abs;
-  }
-
-  // IMPORTANT: GMod loading browser can start with weird sizes — wait a bit before spawning bouncers
   function waitForViewportReady(cb){
     let tries = 0;
     (function check(){
@@ -464,159 +401,63 @@
       const h = window.innerHeight || 0;
       if (w > 300 && h > 200) return cb();
       tries++;
-      if (tries > 90) return cb(); // ~1.5s max
+      if (tries > 90) return cb();
       setTimeout(check, 16);
     })();
   }
 
-  // Start bouncers
   function startBouncers(){
     if (!ENABLE_BOUNCERS) return;
     const container = document.getElementById("bouncers");
     if (!container) return;
 
     const SIZE = BOUNCER_SIZE;
-    const COUNT = Math.min(BOUNCER_COUNT, BOUNCER_IMAGES.length);
-    const SPEED_MIN = 0.85;
-    const SPEED_MAX = 1.9;
+    const COUNT = Math.min(9, BOUNCER_IMAGES.length);
+    const SPEED_MIN = 0.85, SPEED_MAX = 1.9;
+    function rand(min,max){ return Math.random()*(max-min)+min; }
 
-    function rand(min, max){ return Math.random() * (max - min) + min; }
-
-    // unique shuffle
-    const unique = Array.from(new Set(BOUNCER_IMAGES));
-    for (let i = unique.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const tmp = unique[i]; unique[i] = unique[j]; unique[j] = tmp;
-    }
-    const chosen = unique.slice(0, COUNT);
+    const chosen = BOUNCER_IMAGES.slice(0);
+    chosen.sort(() => Math.random()-0.5);
 
     const sprites = [];
-
     function makeSprite(src){
       const img = document.createElement("img");
       img.className = "bouncer";
-      img.width = SIZE;
-      img.height = SIZE;
-      img.draggable = false;
-
-      // absolute URL so GMod doesn’t get confused by query strings
+      img.width = SIZE; img.height = SIZE; img.draggable = false;
       img.src = SITE_BASE + src + "?v=" + Date.now();
 
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-
+      const w = window.innerWidth, h = window.innerHeight;
       const s = {
         el: img,
         x: rand(0, Math.max(0, w - SIZE)),
         y: rand(0, Math.max(0, h - SIZE)),
-        vx: (Math.random() < 0.5 ? -1 : 1) * rand(SPEED_MIN, SPEED_MAX),
-        vy: (Math.random() < 0.5 ? -1 : 1) * rand(SPEED_MIN, SPEED_MAX)
+        vx: (Math.random()<0.5?-1:1)*rand(SPEED_MIN,SPEED_MAX),
+        vy: (Math.random()<0.5?-1:1)*rand(SPEED_MIN,SPEED_MAX)
       };
-
-      img.style.transform = "translate3d(" + s.x + "px," + s.y + "px,0)";
+      img.style.transform = "translate3d("+s.x+"px,"+s.y+"px,0)";
       container.appendChild(img);
       return s;
     }
 
-    for (let i = 0; i < chosen.length; i++){
-      sprites.push(makeSprite(chosen[i]));
-    }
-
-    function clampAll(){
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      for (let i = 0; i < sprites.length; i++){
-        const s = sprites[i];
-        s.x = Math.min(Math.max(0, s.x), Math.max(0, w - SIZE));
-        s.y = Math.min(Math.max(0, s.y), Math.max(0, h - SIZE));
-        s.el.style.transform = "translate3d(" + s.x + "px," + s.y + "px,0)";
-      }
-    }
+    for (let i=0;i<COUNT;i++) sprites.push(makeSprite(chosen[i]));
 
     function tick(){
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-
-      for (let i = 0; i < sprites.length; i++){
+      const w = window.innerWidth, h = window.innerHeight;
+      for (let i=0;i<sprites.length;i++){
         const s = sprites[i];
-        s.x += s.vx;
-        s.y += s.vy;
-
-        if (s.x <= 0){ s.x = 0; s.vx *= -1; }
-        if (s.y <= 0){ s.y = 0; s.vy *= -1; }
-        if (s.x >= w - SIZE){ s.x = w - SIZE; s.vx *= -1; }
-        if (s.y >= h - SIZE){ s.y = h - SIZE; s.vy *= -1; }
-
-        s.el.style.transform = "translate3d(" + s.x + "px," + s.y + "px,0)";
+        s.x += s.vx; s.y += s.vy;
+        if (s.x <= 0){ s.x=0; s.vx*=-1; }
+        if (s.y <= 0){ s.y=0; s.vy*=-1; }
+        if (s.x >= w - SIZE){ s.x=w-SIZE; s.vx*=-1; }
+        if (s.y >= h - SIZE){ s.y=h-SIZE; s.vy*=-1; }
+        s.el.style.transform = "translate3d("+s.x+"px,"+s.y+"px,0)";
       }
-
       requestAnimationFrame(tick);
     }
-
-    window.addEventListener("resize", clampAll);
     requestAnimationFrame(tick);
   }
 
-  // Start clock + (optional) fake progress
-  function startClock(){
-    const clockEl = document.getElementById("clockTxt");
-    if (!clockEl) return;
-    function tickClock(){
-      const d = new Date();
-      const hh = String(d.getHours()).padStart(2,"0");
-      const mm = String(d.getMinutes()).padStart(2,"0");
-      clockEl.textContent = hh + ":" + mm;
-      setTimeout(tickClock, 1000 * 10);
-    }
-    tickClock();
-  }
-
-  function startFakeProgress(){
-    const phaseEl = document.getElementById("phase");
-    const percentEl = document.getElementById("percent");
-    const barFill = document.getElementById("barFill");
-    if (!phaseEl || !percentEl || !barFill) return;
-
-    const phases = [
-      "Starting…",
-      "Mounting Workshop…",
-      "Loading scripts…",
-      "Spawning Ben…",
-      "Final checks…"
-    ];
-
-    let p = 0;
-    let idx = 0;
-
-    function step(){
-      p = Math.min(99, p + Math.floor(Math.random() * 6) + 2);
-      percentEl.textContent = p + "%";
-      barFill.style.width = Math.max(8, p) + "%";
-
-      if (p > (idx+1) * 18 && idx < phases.length - 1){
-        idx++;
-        phaseEl.textContent = phases[idx];
-      }
-
-      setTimeout(step, 350 + Math.random() * 400);
-    }
-
-    phaseEl.textContent = phases[0];
-    percentEl.textContent = "0%";
-    barFill.style.width = "8%";
-    setTimeout(step, 450);
-  }
-
-  function startAfterViewportReady(){
-    waitForViewportReady(function(){
-      startClock();
-      startFakeProgress();
-      startBouncers();
-    });
-  }
-
-  // Kick background ASAP (then everything else starts)
-  tryBg(0);
+  waitForViewportReady(startBouncers);
 })();
 </script>
 </body>
