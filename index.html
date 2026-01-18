@@ -33,6 +33,14 @@
     font-family:var(--sans);
   }
 
+  /* Force GMod CEF to behave like a normal viewport */
+  body{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+  }
+
   /* REAL IMAGE BACKGROUND (GMod-safe) */
   #bgimg{
     position:fixed;
@@ -91,23 +99,50 @@
     transform: translate3d(0,0,0);
   }
 
-  /* UI layout */
+  /* ===============================
+     UI layout (GMod TOP-LEFT FIX)
+     - top pinned
+     - center true center via translate
+     - bottom pinned
+     =============================== */
+
   #wrap{
     position:fixed;
     inset:0;
+    width:100vw;
+    height:100vh;
     z-index:4;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
     pointer-events:none;
-    padding:18px 22px;
   }
 
   #topbar{
+    position:absolute;
+    left:22px;
+    right:22px;
+    top:18px;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:14px;
+  }
+
+  #center{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform: translate(-50%, -50%);
+    width:min(740px, calc(100vw - 44px));
+  }
+
+  #bottombar{
+    position:absolute;
+    left:22px;
+    right:22px;
+    bottom:18px;
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
   }
 
   .pill{
@@ -152,16 +187,8 @@
   .statLabel{ font-size:12px; color: var(--muted-2); font-family: var(--mono); }
   .statValue{ font-size:12px; font-family: var(--mono); color: var(--txt); }
 
-  #center{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    padding: 0 22px;
-    flex:1;
-  }
-
   .panel{
-    width:min(740px, calc(100% - 44px));
+    width:100%;
     border-radius: var(--radius);
     background: linear-gradient(180deg, var(--panel), rgba(10,12,16,0.40));
     border:1px solid var(--stroke-2);
@@ -224,13 +251,6 @@
     color: rgba(255,255,255,0.78);
     flex:0 0 auto;
     margin-top:2px;
-  }
-
-  #bottombar{
-    display:flex;
-    justify-content:space-between;
-    gap:14px;
-    flex-wrap:wrap;
   }
 
   .foot{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
@@ -345,22 +365,35 @@
   // MUST end with /
   const SITE_BASE = "https://leongarvey21.github.io/gmod-loadingscreen/";
 
-  // IMPORTANT: rename your background to bg.jpg (lowercase) and put it beside index.html
+  // Background file in the same folder as index.html
   const BG = "The_Rower.jpg";
 
   const dbg = document.getElementById("dbg");
   function setDbg(t){ if (dbg) dbg.textContent = t; }
+
+  // --------- GMod TOP-LEFT FIX: layout kick ----------
+  function forceLayoutKick(){
+    document.body.style.width = "100vw";
+    document.body.style.height = "100vh";
+    void document.body.offsetHeight; // reflow
+    window.dispatchEvent(new Event("resize"));
+  }
+  setTimeout(forceLayoutKick, 50);
+  setTimeout(forceLayoutKick, 250);
+  setTimeout(forceLayoutKick, 750);
+  setTimeout(forceLayoutKick, 1500);
+  window.addEventListener("resize", forceLayoutKick);
 
   // Load background via <img> (most compatible with GMod CEF)
   const bgimg = document.getElementById("bgimg");
   const bgUrl = SITE_BASE + BG + "?v=" + Date.now();
 
   bgimg.onload = function(){
-    setDbg("dbg: bg loaded OK\n" + bgUrl + "\n(if still dark, it’s the overlay — tell me)");
-    setTimeout(() => { if (dbg) dbg.style.display = "none"; }, 5000);
+    setDbg("dbg: bg loaded OK\n" + bgUrl);
+    setTimeout(() => { if (dbg) dbg.style.display = "none"; }, 3000);
   };
   bgimg.onerror = function(){
-    setDbg("dbg: bg FAILED\n" + bgUrl + "\nFix: rename to bg.jpg + baseline jpg (Paint save-as)");
+    setDbg("dbg: bg FAILED\n" + bgUrl + "\nFix: ensure file exists + exact case match.");
   };
   bgimg.src = bgUrl;
 
@@ -441,6 +474,15 @@
 
     for (let i=0;i<COUNT;i++) sprites.push(makeSprite(chosen[i]));
 
+    function clampAll(){
+      const w = window.innerWidth, h = window.innerHeight;
+      for (const s of sprites){
+        s.x = Math.min(Math.max(0, s.x), Math.max(0, w - SIZE));
+        s.y = Math.min(Math.max(0, s.y), Math.max(0, h - SIZE));
+        s.el.style.transform = "translate3d("+s.x+"px,"+s.y+"px,0)";
+      }
+    }
+
     function tick(){
       const w = window.innerWidth, h = window.innerHeight;
       for (let i=0;i<sprites.length;i++){
@@ -454,6 +496,8 @@
       }
       requestAnimationFrame(tick);
     }
+
+    window.addEventListener("resize", clampAll);
     requestAnimationFrame(tick);
   }
 
@@ -462,3 +506,4 @@
 </script>
 </body>
 </html>
+
